@@ -39,7 +39,54 @@ BGCOLOR    = WHITE
 COLORLIST = [RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE, CYAN]
 
 
+class Bubble(pygame.sprite.Sprite):
+    def __init__(self, color, row=0, column=0):
+        pygame.sprite.Sprite.__init__(self)
 
+        self.rect = pygame.Rect(0, 0, 30, 30)
+        self.rect.centerx = STARTX
+        self.rect.centery = STARTY
+        self.speed = 10
+        self.color = color
+        self.radius = BUBBLERADIUS
+        self.angle = 0
+        self.row = row
+        self.column = column
+        
+    def update(self):
+
+        if self.angle == 90:
+            xmove = 0
+            ymove = self.speed * -1
+        elif self.angle < 90:
+            xmove = self.xcalculate(self.angle)
+            ymove = self.ycalculate(self.angle)
+        elif self.angle > 90:
+            xmove = self.xcalculate(180 - self.angle) * -1
+            ymove = self.ycalculate(180 - self.angle)
+        
+
+        self.rect.x += xmove
+        self.rect.y += ymove
+
+
+    def draw(self):
+        pygame.gfxdraw.filled_circle(DISPLAYSURF, self.rect.centerx, self.rect.centery, self.radius, self.color)
+        pygame.gfxdraw.aacircle(DISPLAYSURF, self.rect.centerx, self.rect.centery, self.radius, GRAY)
+        
+
+
+    def xcalculate(self, angle):
+        radians = math.radians(angle)
+        
+        xmove = math.cos(radians)*(self.speed)
+        return xmove
+
+    def ycalculate(self, angle):
+        radians = math.radians(angle)
+        
+        ymove = math.sin(radians)*(self.speed) * -1
+        return ymove
 
 
 
@@ -80,3 +127,176 @@ def runGame():
     nextBubble.rect.bottom = WINDOWHEIGHT - 5
 
     score = Score()
+
+
+    while True:
+        DISPLAYSURF.fill(BGCOLOR)
+        
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                terminate()
+                
+            elif event.type == KEYDOWN:
+                if (event.key == K_LEFT):
+                    direction = LEFT
+                elif (event.key == K_RIGHT):
+                    direction = RIGHT
+                    
+            elif event.type == KEYUP:
+                direction = None
+                if event.key == K_SPACE:
+                    launchBubble = True
+                elif event.key == K_ESCAPE:
+                    terminate()
+
+        if launchBubble == True:
+            if newBubble == None:
+                newBubble = Bubble(nextBubble.color)
+                newBubble.angle = arrow.angle
+                
+
+            newBubble.update()
+            newBubble.draw()
+            
+            
+            if newBubble.rect.right >= WINDOWWIDTH - 5:
+                newBubble.angle = 180 - newBubble.angle
+            elif newBubble.rect.left <= 5:
+                newBubble.angle = 180 - newBubble.angle
+
+
+            launchBubble, newBubble, score = stopBubble(bubbleArray, newBubble, launchBubble, score)
+
+            finalBubbleList = []
+            for row in range(len(bubbleArray)):
+                for column in range(len(bubbleArray[0])):
+                    if bubbleArray[row][column] != BLANK:
+                        finalBubbleList.append(bubbleArray[row][column])
+                        if bubbleArray[row][column].rect.bottom > (WINDOWHEIGHT - arrow.rect.height - 10):
+                            return score.total, 'lose'
+
+            
+            
+            if len(finalBubbleList) < 1:
+                return score.total, 'win'
+                                        
+                        
+            
+            gameColorList = updateColorList(bubbleArray)
+            random.shuffle(gameColorList)
+            
+                    
+                            
+            if launchBubble == False:
+                
+                nextBubble = Bubble(gameColorList[0])
+                nextBubble.rect.right = WINDOWWIDTH - 5
+                nextBubble.rect.bottom = WINDOWHEIGHT - 5
+
+        
+        
+                            
+        nextBubble.draw()
+        if launchBubble == True:
+            coverNextBubble()
+        
+        arrow.update(direction)
+        arrow.draw()
+
+
+        
+        setArrayPos(bubbleArray)
+        drawBubbleArray(bubbleArray)
+
+        score.draw()
+
+        if pygame.mixer.music.get_busy() == False:
+            if track == len(musicList) - 1:
+                track = 0
+            else:
+                track += 1
+
+            pygame.mixer.music.load(musicList[track])
+            pygame.mixer.music.play()
+
+            
+        
+        pygame.display.update()
+        FPSCLOCK.tick(FPS)
+
+def makeBlankBoard():
+    array = []
+    
+    for row in range(ARRAYHEIGHT):
+        column = []
+        for i in range(ARRAYWIDTH):
+            column.append(BLANK)
+        array.append(column)
+
+    return array
+
+
+
+
+def setBubbles(array, gameColorList):
+    for row in range(BUBBLELAYERS):
+        for column in range(len(array[row])):
+            random.shuffle(gameColorList)
+            newBubble = Bubble(gameColorList[0], row, column)
+            array[row][column] = newBubble 
+            
+    setArrayPos(array)
+
+
+
+
+
+def setArrayPos(array):
+    for row in range(ARRAYHEIGHT):
+        for column in range(len(array[row])):
+            if array[row][column] != BLANK:
+                array[row][column].rect.x = (BUBBLEWIDTH * column) + 5
+                array[row][column].rect.y = (BUBBLEWIDTH * row) + 5
+
+    for row in range(1, ARRAYHEIGHT, 2):
+        for column in range(len(array[row])):
+            if array[row][column] != BLANK:
+                array[row][column].rect.x += BUBBLERADIUS
+                
+
+    for row in range(1, ARRAYHEIGHT):
+        for column in range(len(array[row])):
+            if array[row][column] != BLANK:
+                array[row][column].rect.y -= (BUBBLEYADJUST * row)
+
+    deleteExtraBubbles(array)
+
+
+
+def deleteExtraBubbles(array):
+    for row in range(ARRAYHEIGHT):
+        for column in range(len(array[row])):
+            if array[row][column] != BLANK:
+                if array[row][column].rect.right > WINDOWWIDTH:
+                    array[row][column] = BLANK
+
+
+
+def updateColorList(bubbleArray):
+    newColorList = []
+
+    for row in range(len(bubbleArray)):
+        for column in range(len(bubbleArray[0])):
+            if bubbleArray[row][column] != BLANK:
+                newColorList.append(bubbleArray[row][column].color)
+
+    colorSet = set(newColorList)
+
+    if len(colorSet) < 1:
+        colorList = []
+        colorList.append(WHITE)
+        return colorList
+
+    else:
+
+        return list(colorSet)
