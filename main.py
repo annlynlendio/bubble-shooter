@@ -300,3 +300,258 @@ def updateColorList(bubbleArray):
     else:
 
         return list(colorSet)
+
+
+def makeBlankBoard():
+    array = []
+    
+    for row in range(ARRAYHEIGHT):
+        column = []
+        for i in range(ARRAYWIDTH):
+            column.append(BLANK)
+        array.append(column)
+
+    return array
+
+
+
+
+def setBubbles(array, gameColorList):
+    for row in range(BUBBLELAYERS):
+        for column in range(len(array[row])):
+            random.shuffle(gameColorList)
+            newBubble = Bubble(gameColorList[0], row, column)
+            array[row][column] = newBubble 
+            
+    setArrayPos(array)
+
+
+
+
+
+def setArrayPos(array):
+    for row in range(ARRAYHEIGHT):
+        for column in range(len(array[row])):
+            if array[row][column] != BLANK:
+                array[row][column].rect.x = (BUBBLEWIDTH * column) + 5
+                array[row][column].rect.y = (BUBBLEWIDTH * row) + 5
+
+    for row in range(1, ARRAYHEIGHT, 2):
+        for column in range(len(array[row])):
+            if array[row][column] != BLANK:
+                array[row][column].rect.x += BUBBLERADIUS
+                
+
+    for row in range(1, ARRAYHEIGHT):
+        for column in range(len(array[row])):
+            if array[row][column] != BLANK:
+                array[row][column].rect.y -= (BUBBLEYADJUST * row)
+
+    deleteExtraBubbles(array)
+
+
+
+def deleteExtraBubbles(array):
+    for row in range(ARRAYHEIGHT):
+        for column in range(len(array[row])):
+            if array[row][column] != BLANK:
+                if array[row][column].rect.right > WINDOWWIDTH:
+                    array[row][column] = BLANK
+
+
+
+def updateColorList(bubbleArray):
+    newColorList = []
+
+    for row in range(len(bubbleArray)):
+        for column in range(len(bubbleArray[0])):
+            if bubbleArray[row][column] != BLANK:
+                newColorList.append(bubbleArray[row][column].color)
+
+    colorSet = set(newColorList)
+
+    if len(colorSet) < 1:
+        colorList = []
+        colorList.append(WHITE)
+        return colorList
+
+    else:
+
+        return list(colorSet)
+    
+    
+
+
+
+def checkForFloaters(bubbleArray):
+    bubbleList = [column for column in range(len(bubbleArray[0]))
+                         if bubbleArray[0][column] != BLANK]
+
+    newBubbleList = []
+
+    for i in range(len(bubbleList)):
+        if i == 0:
+            newBubbleList.append(bubbleList[i])
+        elif bubbleList[i] > bubbleList[i - 1] + 1:
+            newBubbleList.append(bubbleList[i])
+
+    copyOfBoard = copy.deepcopy(bubbleArray)
+
+    for row in range(len(bubbleArray)):
+        for column in range(len(bubbleArray[0])):
+            bubbleArray[row][column] = BLANK
+    
+
+    for column in newBubbleList:
+        popFloaters(bubbleArray, copyOfBoard, column)
+
+
+
+def popFloaters(bubbleArray, copyOfBoard, column, row=0):
+    if (row < 0 or row > (len(bubbleArray)-1)
+                or column < 0 or column > (len(bubbleArray[0])-1)):
+        return
+    
+    elif copyOfBoard[row][column] == BLANK:
+        return
+
+    elif bubbleArray[row][column] == copyOfBoard[row][column]:
+        return
+
+    bubbleArray[row][column] = copyOfBoard[row][column]
+    
+
+    if row == 0:
+        popFloaters(bubbleArray, copyOfBoard, column + 1, row    )
+        popFloaters(bubbleArray, copyOfBoard, column - 1, row    )
+        popFloaters(bubbleArray, copyOfBoard, column,     row + 1)
+        popFloaters(bubbleArray, copyOfBoard, column - 1, row + 1)
+
+    elif row % 2 == 0:
+        popFloaters(bubbleArray, copyOfBoard, column + 1, row    )
+        popFloaters(bubbleArray, copyOfBoard, column - 1, row    )
+        popFloaters(bubbleArray, copyOfBoard, column,     row + 1)
+        popFloaters(bubbleArray, copyOfBoard, column - 1, row + 1)
+        popFloaters(bubbleArray, copyOfBoard, column,     row - 1)
+        popFloaters(bubbleArray, copyOfBoard, column - 1, row - 1)
+
+    else:
+        popFloaters(bubbleArray, copyOfBoard, column + 1, row    )
+        popFloaters(bubbleArray, copyOfBoard, column - 1, row    )
+        popFloaters(bubbleArray, copyOfBoard, column,     row + 1)
+        popFloaters(bubbleArray, copyOfBoard, column + 1, row + 1)
+        popFloaters(bubbleArray, copyOfBoard, column,     row - 1)
+        popFloaters(bubbleArray, copyOfBoard, column + 1, row - 1)
+        
+
+
+def stopBubble(bubbleArray, newBubble, launchBubble, score):
+    deleteList = []
+    popSound = pygame.mixer.Sound('ann-lyn/bubbleshooter-master/popcork.ogg')
+    
+    for row in range(len(bubbleArray)):
+        for column in range(len(bubbleArray[row])):
+            
+            if (bubbleArray[row][column] != BLANK and newBubble != None):
+                if (pygame.sprite.collide_rect(newBubble, bubbleArray[row][column])) or newBubble.rect.top < 0:
+                    if newBubble.rect.top < 0:
+                        newRow, newColumn = addBubbleToTop(bubbleArray, newBubble)
+                        
+                    elif newBubble.rect.centery >= bubbleArray[row][column].rect.centery:
+
+                        if newBubble.rect.centerx >= bubbleArray[row][column].rect.centerx:
+                            if row == 0 or (row) % 2 == 0:
+                                newRow = row + 1
+                                newColumn = column
+                                if bubbleArray[newRow][newColumn] != BLANK:
+                                    newRow = newRow - 1
+                                bubbleArray[newRow][newColumn] = copy.copy(newBubble)
+                                bubbleArray[newRow][newColumn].row = newRow
+                                bubbleArray[newRow][newColumn].column = newColumn
+                                
+                            else:
+                                newRow = row + 1
+                                newColumn = column + 1
+                                if bubbleArray[newRow][newColumn] != BLANK:
+                                    newRow = newRow - 1
+                                bubbleArray[newRow][newColumn] = copy.copy(newBubble)
+                                bubbleArray[newRow][newColumn].row = newRow
+                                bubbleArray[newRow][newColumn].column = newColumn
+                                                    
+                        elif newBubble.rect.centerx < bubbleArray[row][column].rect.centerx:
+                            if row == 0 or row % 2 == 0:
+                                newRow = row + 1
+                                newColumn = column - 1
+                                if newColumn < 0:
+                                    newColumn = 0
+                                if bubbleArray[newRow][newColumn] != BLANK:
+                                    newRow = newRow - 1
+                                bubbleArray[newRow][newColumn] = copy.copy(newBubble)
+                                bubbleArray[newRow][newColumn].row = newRow
+                                bubbleArray[newRow][newColumn].column = newColumn
+                            else:
+                                newRow = row + 1
+                                newColumn = column
+                                if bubbleArray[newRow][newColumn] != BLANK:
+                                    newRow = newRow - 1
+                                bubbleArray[newRow][newColumn] = copy.copy(newBubble)
+                                bubbleArray[newRow][newColumn].row = newRow
+                                bubbleArray[newRow][newColumn].column = newColumn
+                                
+                            
+                    elif newBubble.rect.centery < bubbleArray[row][column].rect.centery:
+                        if newBubble.rect.centerx >= bubbleArray[row][column].rect.centerx:
+                            if row == 0 or row % 2 == 0:
+                                newRow = row - 1
+                                newColumn = column
+                                if bubbleArray[newRow][newColumn] != BLANK:
+                                    newRow = newRow + 1
+                                bubbleArray[newRow][newColumn] = copy.copy(newBubble)
+                                bubbleArray[newRow][newColumn].row = newRow
+                                bubbleArray[newRow][newColumn].column = newColumn
+                            else:
+                                newRow = row - 1
+                                newColumn = column + 1
+                                if bubbleArray[newRow][newColumn] != BLANK:
+                                    newRow = newRow + 1
+                                bubbleArray[newRow][newColumn] = copy.copy(newBubble)
+                                bubbleArray[newRow][newColumn].row = newRow
+                                bubbleArray[newRow][newColumn].column = newColumn
+                            
+                        elif newBubble.rect.centerx <= bubbleArray[row][column].rect.centerx:
+                            if row == 0 or row % 2 == 0:
+                                newRow = row - 1
+                                newColumn = column - 1
+                                if bubbleArray[newRow][newColumn] != BLANK:
+                                    newRow = newRow + 1
+                                bubbleArray[newRow][newColumn] = copy.copy(newBubble)
+                                bubbleArray[newRow][newColumn].row = newRow
+                                bubbleArray[newRow][newColumn].column = newColumn
+                                
+                            else:
+                                newRow = row - 1
+                                newColumn = column
+                                if bubbleArray[newRow][newColumn] != BLANK:
+                                    newRow = newRow + 1
+                                bubbleArray[newRow][newColumn] = copy.copy(newBubble)
+                                bubbleArray[newRow][newColumn].row = newRow
+                                bubbleArray[newRow][newColumn].column = newColumn
+
+
+                    popBubbles(bubbleArray, newRow, newColumn, newBubble.color, deleteList)
+                    
+                    
+                    if len(deleteList) >= 3:
+                        for pos in deleteList:
+                            popSound.play()
+                            row = pos[0]
+                            column = pos[1]
+                            bubbleArray[row][column] = BLANK
+                        checkForFloaters(bubbleArray)
+                        
+                        score.update(deleteList)
+
+                    launchBubble = False
+                    newBubble = None
+
+    return launchBubble, newBubble, score
