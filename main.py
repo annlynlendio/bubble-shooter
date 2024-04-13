@@ -555,3 +555,123 @@ def stopBubble(bubbleArray, newBubble, launchBubble, score):
                     newBubble = None
 
     return launchBubble, newBubble, score
+
+
+
+def addBubbleToTop(bubbleArray, bubble):
+    posx = bubble.rect.centerx
+    leftSidex = posx - BUBBLERADIUS
+
+    columnDivision = math.modf(float(leftSidex) / float(BUBBLEWIDTH))
+    column = int(columnDivision[1])
+
+    if columnDivision[0] < 0.5:
+        bubbleArray[0][column] = copy.copy(bubble)
+    else:
+        column += 1
+        bubbleArray[0][column] = copy.copy(bubble)
+
+    row = 0
+    
+
+    return row, column
+    
+    
+
+
+def popBubbles(bubbleArray, row, column, color, deleteList):
+    if row < 0 or column < 0 or row > (len(bubbleArray)-1) or column > (len(bubbleArray[0])-1):
+        return
+
+    elif bubbleArray[row][column] == BLANK:
+        return
+    
+    elif bubbleArray[row][column].color != color:
+        return
+
+    for bubble in deleteList:
+        if bubbleArray[bubble[0]][bubble[1]] == bubbleArray[row][column]:
+            return
+
+    deleteList.append((row, column))
+
+    if row == 0:
+        popBubbles(bubbleArray, row,     column - 1, color, deleteList)
+        popBubbles(bubbleArray, row,     column + 1, color, deleteList)
+        popBubbles(bubbleArray, row + 1, column,     color, deleteList)
+        popBubbles(bubbleArray, row + 1, column - 1, color, deleteList)
+
+    elif row % 2 == 0:
+        
+        popBubbles(bubbleArray, row + 1, column,         color, deleteList)
+        popBubbles(bubbleArray, row + 1, column - 1,     color, deleteList)
+        popBubbles(bubbleArray, row - 1, column,         color, deleteList)
+        popBubbles(bubbleArray, row - 1, column - 1,     color, deleteList)
+        popBubbles(bubbleArray, row,     column + 1,     color, deleteList)
+        popBubbles(bubbleArray, row,     column - 1,     color, deleteList)
+
+    else:
+        popBubbles(bubbleArray, row - 1, column,     color, deleteList)
+        popBubbles(bubbleArray, row - 1, column + 1, color, deleteList)
+        popBubbles(bubbleArray, row + 1, column,     color, deleteList)
+        popBubbles(bubbleArray, row + 1, column + 1, color, deleteList)
+        popBubbles(bubbleArray, row,     column + 1, color, deleteList)
+        popBubbles(bubbleArray, row,     column - 1, color, deleteList)
+            
+
+
+def drawBubbleArray(array):
+    for row in range(ARRAYHEIGHT):
+        for column in range(len(array[row])):
+            if array[row][column] != BLANK:
+                array[row][column].draw()
+
+
+                    
+
+def makeDisplay():
+    DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
+    DISPLAYRECT = DISPLAYSURF.get_rect()
+    DISPLAYSURF.fill(BGCOLOR)
+    DISPLAYSURF.convert()
+    pygame.display.update()
+
+    return DISPLAYSURF, DISPLAYRECT
+    
+ 
+def terminate():
+    pygame.quit()
+    sys.exit()
+
+
+def coverNextBubble():
+    whiteRect = pygame.Rect(0, 0, BUBBLEWIDTH, BUBBLEWIDTH)
+    whiteRect.bottom = WINDOWHEIGHT
+    whiteRect.right = WINDOWWIDTH
+    pygame.draw.rect(DISPLAYSURF, BGCOLOR, whiteRect)
+
+
+
+def endScreen(score, winorlose):
+    endFont = pygame.font.SysFont('Helvetica', 20)
+    endMessage1 = endFont.render('You ' + winorlose + '! Your Score is ' + str(score) + '. Press Enter to Play Again.', True, BLACK, BGCOLOR)
+    endMessage1Rect = endMessage1.get_rect()
+    endMessage1Rect.center = DISPLAYRECT.center
+
+    DISPLAYSURF.fill(BGCOLOR)
+    DISPLAYSURF.blit(endMessage1, endMessage1Rect)
+    pygame.display.update()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                terminate()
+            elif event.type == KEYUP:
+                if event.key == K_RETURN:
+                    return
+                elif event.key == K_ESCAPE:
+                    terminate()
+        
+        
+if __name__ == '__main__':
+    main()
